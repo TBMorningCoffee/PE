@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P&L Calculator — TB Morning Coffee Advisory</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f2f2ef;color:#111}
+.app{display:flex;height:100vh;overflow:hidden}
+/* Sidebar */
+.sidebar{width:215px;min-width:215px;background:#1c1c1c;color:#ccc;display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.logo{padding:18px 16px 14px;border-bottom:1px solid #333}
+.logo-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:2px}
+.logo-sub{font-size:10px;color:#666}
+.nav-section{padding:14px 16px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#555;font-weight:600}
+.nav-item{padding:8px 16px;font-size:13px;cursor:pointer;color:#999;display:flex;align-items:center;gap:8px;border-left:2px solid transparent;user-select:none;transition:all .15s}
+.nav-item:hover{color:#fff;background:#252525}
+.nav-item.active{color:#fff;background:#252525;border-left:2px solid #5a9e6f}
+.nav-badge{font-size:10px;background:#5a9e6f;color:#fff;padding:1px 6px;border-radius:10px;margin-left:auto}
+/* Main */
+.main{flex:1;overflow-y:auto;padding:24px 28px}
+.page{display:none}.page.active{display:block}
+.page-title{font-size:19px;font-weight:700;margin-bottom:2px}
+.page-sub{font-size:12px;color:#999;margin-bottom:18px}
+/* Settings bar */
+.sbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.sbar label{font-size:12px;color:#888}
+.sbar select{padding:4px 9px;border:1px solid #ddd;border-radius:6px;font-size:12px;background:#fff}
+/* Cards */
+.card{background:#fff;border:1px solid #e4e4e0;border-radius:10px;padding:15px 17px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#999;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
+.card.highlight{background:#f0f8f4;border-color:#b8d8c4}
+/* Tables */
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead th{font-size:11px;color:#bbb;font-weight:500;text-align:left;padding:0 6px 6px;border-bottom:1px solid #efefeb}
+.tbl thead th.r{text-align:right}
+.tbl tbody tr:hover{background:#fafaf8}
+.tbl tbody td{padding:4px 6px;border-bottom:1px solid #f5f5f2;vertical-align:middle}
+.tbl tfoot td{padding:7px 6px 2px;border-top:1px solid #ddd;font-weight:700;font-size:13px}
+.tbl tfoot td.r{text-align:right}
+.tbl tfoot tr.tsub td{font-weight:400;color:#999;font-size:12px;border-top:none;padding-top:2px}
+input[type=text].cell,input[type=number].cell{width:100%;border:1px solid transparent;border-radius:5px;padding:4px 5px;font-size:13px;background:transparent;color:#111}
+input[type=number].cell{text-align:right;-moz-appearance:textfield}
+input[type=number].cell::-webkit-outer-spin-button,input[type=number].cell::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=text].cell:hover,input[type=text].cell:focus,input[type=number].cell:hover,input[type=number].cell:focus{border-color:#ddd;background:#fafafa;outline:none}
+select.cell{width:100%;border:1px solid transparent;border-radius:5px;padding:4px 5px;font-size:12px;background:transparent;color:#777;cursor:pointer}
+select.cell:hover,select.cell:focus{border-color:#ddd;background:#fafafa;outline:none}
+.del-btn{border:none;background:none;color:#ddd;cursor:pointer;font-size:16px;line-height:1;padding:1px 4px;border-radius:4px}
+.del-btn:hover{color:#e24b4a;background:#fef0f0}
+.add-btn{font-size:12px;color:#5a9e6f;background:none;border:1px dashed #b8d8c4;border-radius:6px;padding:4px 11px;cursor:pointer;margin-top:7px;width:100%;text-align:left}
+.add-btn:hover{background:#f0faf4}
+.comp-cell{color:#5a9e6f;font-size:12px;text-align:right;font-style:italic}
+/* Grid layouts */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+/* Fields */
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11px;color:#999;margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.field input{width:100%;padding:7px 10px;border:1px solid #e0e0e0;border-radius:7px;font-size:14px;background:#fafafa;color:#111}
+.field input:focus{outline:none;border-color:#5a9e6f}
+.field .hint{font-size:11px;color:#bbb;margin-top:3px}
+/* KPI cards */
+.kgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.kcard{background:#fff;border:1px solid #e4e4e0;border-radius:10px;padding:12px 14px}
+.kcard.accent{background:#f0f8f4;border-color:#b8d8c4}
+.klbl{font-size:11px;color:#bbb;margin-bottom:3px}
+.kval{font-size:20px;font-weight:700;color:#111}
+.kval.pos{color:#1a9e75}.kval.neg{color:#e24b4a}.kval.wrn{color:#c07c00}
+.ksub{font-size:11px;color:#ccc;margin-top:2px}
+/* P&L table */
+.plt{width:100%;border-collapse:collapse}
+.plt td{padding:5px 9px;font-size:13px;border-bottom:1px solid #f5f5f2}
+.plt td:last-child{text-align:right;font-variant-numeric:tabular-nums;min-width:105px}
+.plt tr.sec td{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#bbb;padding-top:14px;padding-bottom:2px;border-bottom:none;font-weight:700}
+.plt tr.ind td:first-child{padding-left:20px;color:#888}
+.plt tr.sub td{font-weight:700;background:#f8f8f5;border-top:1px solid #eee;border-bottom:1px solid #eee}
+.plt tr.tot td{font-weight:700;font-size:14px;background:#f0f8f4;border-top:2px solid #b8d8c4}
+.plt tr.marg td{color:#bbb;font-size:11px}
+.plt tr.marg td:first-child{padding-left:20px}
+/* Alerts */
+.alert{padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:12px;border:1px solid}
+.alert.g{background:#eaf5ee;color:#1a6e3e;border-color:#8ecc9e}
+.alert.r{background:#fef0f0;color:#9e2222;border-color:#e89090}
+.alert.a{background:#fef8ee;color:#7a4a00;border-color:#e8c060}
+.alert.b{background:#eef4fe;color:#1a3a7a;border-color:#90b0e8}
+/* Unit economics */
+.rbar{height:5px;border-radius:3px;background:#eee;margin:5px 0 7px;overflow:hidden}
+.rfill{height:100%;border-radius:3px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:700}
+.badge.g{background:#eaf5ee;color:#1a6e3e}
+.badge.r{background:#fef0f0;color:#9e2222}
+.badge.a{background:#fef8ee;color:#7a4a00}
+.urow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f5f5f2;font-size:13px}
+.urow:last-child{border-bottom:none}
+.urow.bold{font-weight:700}
+.hint{font-size:11px;color:#bbb;margin-bottom:7px}
+/* Info box */
+.info{background:#f0f8f4;border:1px solid #b8d8c4;border-radius:8px;padding:11px 13px;font-size:12px;color:#2a5e3a;margin-bottom:12px;line-height:1.6}
+.info strong{font-weight:700}
+/* Bilant form */
+.bilant-section{margin-bottom:16px}
+.bilant-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;padding:8px 0 6px;border-bottom:1px solid #eee;margin-bottom:8px}
+.bilant-row{display:grid;grid-template-columns:1fr 130px 130px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid #f5f5f2}
+.bilant-row:last-child{border-bottom:none}
+.bilant-row.bold{font-weight:700;background:#f8f8f5}
+.bilant-row.total{font-weight:700;background:#f0f8f4;border-top:2px solid #b8d8c4;border-bottom:2px solid #b8d8c4}
+.bilant-row label{font-size:12px;color:#555;padding:3px 0}
+.bilant-row label.ind{padding-left:16px;color:#777}
+.bilant-row input[type=number]{width:100%;border:1px solid #e0e0e0;border-radius:5px;padding:4px 8px;font-size:13px;text-align:right;background:#fafafa;-moz-appearance:textfield}
+.bilant-row input[type=number]::-webkit-outer-spin-button,.bilant-row input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+.bilant-row input[type=number]:focus{outline:none;border-color:#5a9e6f;background:#fff}
+.bilant-row .calc{font-size:12px;text-align:right;color:#5a9e6f;padding-right:2px;font-weight:600}
+.bilant-hdr{display:grid;grid-template-columns:1fr 130px 130px;gap:8px;font-size:11px;color:#bbb;font-weight:600;padding:0 0 4px;text-align:right}
+.bilant-hdr span:first-child{text-align:left}
+/* Tabs inside bilant */
+.sub-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.sub-tab{padding:4px 12px;font-size:12px;border:1px solid #ddd;border-radius:16px;cursor:pointer;background:#fff;color:#888;user-select:none}
+.sub-tab.active{background:#1c1c1c;color:#fff;border-color:#1c1c1c}
+.sub-pane{display:none}.sub-pane.active{display:block}
+/* Divider */
+.divider{height:1px;background:#eee;margin:12px 0}
+/* Action button */
+.action-btn{padding:8px 18px;background:#1c1c1c;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600}
+.action-btn:hover{background:#333}
+.action-btn.secondary{background:#fff;color:#333;border:1px solid #ddd}
+.action-btn.secondary:hover{background:#f5f5f5}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ─── SIDEBAR ─────────────────────────────────────────── -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title">P&L Calculator</div>
+    <div class="logo-sub">TB Morning Coffee Advisory</div>
+  </div>
+  <div class="nav-section">Bilanț 2025</div>
+  <div class="nav-item active" onclick="SP('bilant',this)">📋 Bilanț / F10–F20 <span class="nav-badge">NEW</span></div>
+  <div class="nav-section">Custom inputs</div>
+  <div class="nav-item" onclick="SP('revenue',this)">📈 Revenue</div>
+  <div class="nav-item" onclick="SP('cogs',this)">📦 COGS</div>
+  <div class="nav-item" onclick="SP('cac',this)">🎯 CAC inputs</div>
+  <div class="nav-item" onclick="SP('opex',this)">🏢 Other opex</div>
+  <div class="nav-item" onclick="SP('ltv',this)">⚡ LTV inputs</div>
+  <div class="nav-section">Output</div>
+  <div class="nav-item" onclick="SP('pl',this)">📄 P&L statement</div>
+  <div class="nav-item" onclick="SP('unit',this)">🔬 Unit economics</div>
+  <div class="nav-item" onclick="SP('fcf',this)">💰 Free cash flow</div>
+</div>
+
+<!-- ─── MAIN ───────────────────────────────────────────── -->
+<div class="main">
+
+<div class="sbar">
+  <label>Currency</label>
+  <select id="g-cur" onchange="R()"><option value="RON ">RON</option><option value="€">€ EUR</option><option value="$">$ USD</option><option value="£">£ GBP</option></select>
+  <label>Period</label>
+  <select id="g-period" onchange="R()"><option value="annual">Annual</option><option value="monthly">Monthly</option></select>
+  <label>Data source</label>
+  <select id="g-source" onchange="R()"><option value="bilant">Bilanț 2025</option><option value="custom">Custom inputs</option></select>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     BILANȚ TAB  — F10 + F20 + FCF inputs
+     ══════════════════════════════════════════════════════ -->
+<div id="page-bilant" class="page active">
+  <div class="page-title">Bilanț 2025 — Situații Financiare</div>
+  <div class="page-sub">TB Morning Coffee Advisory S.R.L. · CUI 49942264 · Exercițiul financiar 31.12.2025 · Valori în LEI</div>
+
+  <div class="alert b">ℹ️ Fill in the values from your statutory financial statements (F10 Balance Sheet + F20 P&L). All output tabs will auto-calculate from this data. Pre-filled with values from your Bilanț_2025 document.</div>
+
+  <div class="sub-tabs">
+    <div class="sub-tab active" onclick="SST('f10',this)">F10 — Bilanț Prescurtat</div>
+    <div class="sub-tab" onclick="SST('f20',this)">F20 — Cont de Profit și Pierdere</div>
+    <div class="sub-tab" onclick="SST('f30',this)">F30 — Date Informative</div>
+    <div class="sub-tab" onclick="SST('fcf-inp',this)">FCF adjustments</div>
+  </div>
+
+  <!-- F10 Balance Sheet -->
+  <div id="sp-f10" class="sub-pane active">
+    <div class="g2">
+      <div>
+        <div class="card">
+          <div class="card-title">A. Active imobilizate</div>
+          <div class="bilant-hdr"><span>Element</span><span>01.01.2025</span><span>31.12.2025</span></div>
+          <div class="bilant-row"><label>I. Imobilizări necorporale</label><input type="number" id="b-incorp-prev" value="0" oninput="R()"><input type="number" id="b-incorp" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>II. Imobilizări corporale</label><input type="number" id="b-corp-prev" value="0" oninput="R()"><input type="number" id="b-corp" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>III. Imobilizări financiare</label><input type="number" id="b-ifin-prev" value="0" oninput="R()"><input type="number" id="b-ifin" value="0" oninput="R()"></div>
+          <div class="bilant-row bold"><label>Active imobilizate — TOTAL</label><span class="calc" id="bc-imob-prev">0</span><span class="calc" id="bc-imob">0</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">B. Active circulante</div>
+          <div class="bilant-hdr"><span>Element</span><span>01.01.2025</span><span>31.12.2025</span></div>
+          <div class="bilant-row"><label>I. Stocuri</label><input type="number" id="b-stoc-prev" value="0" oninput="R()"><input type="number" id="b-stoc" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>II. Creanțe</label><input type="number" id="b-creante-prev" value="0" oninput="R()"><input type="number" id="b-creante" value="16" oninput="R()"></div>
+          <div class="bilant-row"><label>III. Investiții pe termen scurt</label><input type="number" id="b-inv-prev" value="0" oninput="R()"><input type="number" id="b-inv" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>IV. Casa și conturi la bănci</label><input type="number" id="b-casa-prev" value="46" oninput="R()"><input type="number" id="b-casa" value="435" oninput="R()"></div>
+          <div class="bilant-row bold"><label>Active circulante — TOTAL</label><span class="calc" id="bc-circ-prev">46</span><span class="calc" id="bc-circ">451</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">C–D. Alte elemente bilanțiere</div>
+          <div class="bilant-hdr"><span>Element</span><span>01.01.2025</span><span>31.12.2025</span></div>
+          <div class="bilant-row"><label>C. Cheltuieli în avans</label><input type="number" id="b-chelav-prev" value="0" oninput="R()"><input type="number" id="b-chelav" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>D. Datorii &lt; 1 an</label><input type="number" id="b-dat1-prev" value="2527" oninput="R()"><input type="number" id="b-dat1" value="10165" oninput="R()"></div>
+          <div class="bilant-row bold"><label>E. Active circ. nete / datorii curente nete</label><span class="calc" id="bc-acn-prev">-2481</span><span class="calc" id="bc-acn">-9714</span></div>
+          <div class="bilant-row bold"><label>F. Total active minus datorii curente</label><span class="calc" id="bc-tatdc-prev">-2481</span><span class="calc" id="bc-tatdc">-9714</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">G–I. Datorii &amp; provizioane</div>
+          <div class="bilant-hdr"><span>Element</span><span>01.01.2025</span><span>31.12.2025</span></div>
+          <div class="bilant-row"><label>G. Datorii &gt; 1 an</label><input type="number" id="b-dat-lng-prev" value="0" oninput="R()"><input type="number" id="b-dat-lng" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>H. Provizioane</label><input type="number" id="b-prov-prev" value="0" oninput="R()"><input type="number" id="b-prov" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>I. Venituri în avans</label><input type="number" id="b-venav-prev" value="0" oninput="R()"><input type="number" id="b-venav" value="0" oninput="R()"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">J. Capital și rezerve</div>
+          <div class="bilant-hdr"><span>Element</span><span>01.01.2025</span><span>31.12.2025</span></div>
+          <div class="bilant-row"><label>Capital subscris vărsat</label><input type="number" id="b-cap-prev" value="200" oninput="R()"><input type="number" id="b-cap" value="200" oninput="R()"></div>
+          <div class="bilant-row"><label>Prime de capital</label><input type="number" id="b-prime-prev" value="0" oninput="R()"><input type="number" id="b-prime" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Rezerve din reevaluare</label><input type="number" id="b-reeval-prev" value="0" oninput="R()"><input type="number" id="b-reeval" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Rezerve (ct. 106)</label><input type="number" id="b-rez-prev" value="0" oninput="R()"><input type="number" id="b-rez" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Profit/pierdere reportat(ă) — sold C</label><input type="number" id="b-profrap-c-prev" value="0" oninput="R()"><input type="number" id="b-profrap-c" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Profit/pierdere reportat(ă) — sold D</label><input type="number" id="b-profrap-d-prev" value="0" oninput="R()"><input type="number" id="b-profrap-d" value="2681" oninput="R()"></div>
+          <div class="bilant-row"><label>Profit exercițiu — sold C</label><input type="number" id="b-profex-c-prev" value="0" oninput="R()"><input type="number" id="b-profex-c" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Pierdere exercițiu — sold D</label><input type="number" id="b-profex-d-prev" value="2681" oninput="R()"><input type="number" id="b-profex-d" value="7233" oninput="R()"></div>
+          <div class="bilant-row total"><label>Capitaluri proprii — TOTAL</label><span class="calc" id="bc-cap-prev">-2481</span><span class="calc" id="bc-cap">-9714</span></div>
+          <div class="bilant-row total"><label>CAPITALURI — TOTAL</label><span class="calc" id="bc-captot-prev">-2481</span><span class="calc" id="bc-captot">-9714</span></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /sp-f10 -->
+
+  <!-- F20 P&L -->
+  <div id="sp-f20" class="sub-pane">
+    <div class="alert g">✓ Values pre-filled from your Bilanț_2025 document (F20 — exercițiul financiar 2025 vs 2024). All in LEI.</div>
+    <div class="g2">
+      <div>
+        <div class="card">
+          <div class="card-title">Venituri (Revenue)</div>
+          <div class="bilant-hdr"><span>Indicator</span><span>2024</span><span>2025</span></div>
+          <div class="bilant-row"><label>1. Cifra de afaceri netă</label><input type="number" id="f20-can-prev" value="0" oninput="R()"><input type="number" id="f20-can" value="31792" oninput="R()"></div>
+          <div class="bilant-row ind"><label>— din care: activitate preponderentă</label><input type="number" id="f20-can-prep-prev" value="0" oninput="R()"><input type="number" id="f20-can-prep" value="31792" oninput="R()"></div>
+          <div class="bilant-row"><label>2. Alte venituri din exploatare</label><input type="number" id="f20-ave-prev" value="0" oninput="R()"><input type="number" id="f20-ave" value="0" oninput="R()"></div>
+          <div class="bilant-row bold"><label>Total venituri exploatare</label><span class="calc" id="bc-tve-prev">0</span><span class="calc" id="bc-tve">31792</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Cheltuieli (Costs)</div>
+          <div class="bilant-hdr"><span>Indicator</span><span>2024</span><span>2025</span></div>
+          <div class="bilant-row"><label>3. Costul mat. prime și consumabile</label><input type="number" id="f20-mat-prev" value="0" oninput="R()"><input type="number" id="f20-mat" value="71" oninput="R()"></div>
+          <div class="bilant-row"><label>4. Cheltuieli cu personalul</label><input type="number" id="f20-sal-prev" value="0" oninput="R()"><input type="number" id="f20-sal" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>5. Ajustări de valoare (amortizare)</label><input type="number" id="f20-amort-prev" value="0" oninput="R()"><input type="number" id="f20-amort" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>6. Alte cheltuieli de exploatare</label><input type="number" id="f20-alte-prev" value="2681" oninput="R()"><input type="number" id="f20-alte" value="38954" oninput="R()"></div>
+          <div class="bilant-row ind"><label>— cheltuieli energie (ct.6051)</label><input type="number" id="f20-en-prev" value="0" oninput="R()"><input type="number" id="f20-en" value="0" oninput="R()"></div>
+          <div class="bilant-row ind"><label>— cheltuieli gaze (ct.6053)</label><input type="number" id="f20-gaz-prev" value="0" oninput="R()"><input type="number" id="f20-gaz" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>7. Impozite și taxe</label><input type="number" id="f20-imp-prev" value="0" oninput="R()"><input type="number" id="f20-imp" value="0" oninput="R()"></div>
+          <div class="bilant-row bold"><label>Total cheltuieli exploatare</label><span class="calc" id="bc-tce-prev">2681</span><span class="calc" id="bc-tce">39025</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div class="card-title">Rezultat exercițiu</div>
+          <div class="bilant-hdr"><span>Indicator</span><span>2024</span><span>2025</span></div>
+          <div class="bilant-row"><label>8. Venituri din impozit pe profit (ct.794)</label><input type="number" id="f20-imp794-prev" value="0" oninput="R()"><input type="number" id="f20-imp794" value="0" oninput="R()"></div>
+          <div class="bilant-row bold"><label>Profit net</label><span class="calc" id="bc-profnet-prev" style="color:#1a9e75">0</span><span class="calc" id="bc-profnet" style="color:#1a9e75">0</span></div>
+          <div class="bilant-row bold"><label>Pierdere netă</label><span class="calc" id="bc-pierdere-prev" style="color:#e24b4a">2681</span><span class="calc" id="bc-pierdere" style="color:#e24b4a">7233</span></div>
+        </div>
+        <div class="card card" style="background:#fef8ee;border-color:#e8c060">
+          <div class="card-title" style="color:#7a4a00">⚠️ Observations from F20</div>
+          <div id="f20-obs" style="font-size:12px;color:#7a4a00;line-height:1.7"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Additional P&L detail (not in F20)</div>
+          <div class="bilant-hdr"><span>Item</span><span></span><span>Amount</span></div>
+          <div class="bilant-row"><label>Dobânzi / interest expense</label><span></span><input type="number" id="f20-int" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>Impozit pe profit / income tax (LEI)</label><span></span><input type="number" id="f20-tax-amt" value="0" oninput="R()"></div>
+          <div class="bilant-row"><label>— or tax rate (%) instead</label><span></span><input type="number" id="f20-taxrate" value="1" min="0" max="80" oninput="R()"><div class="hint" style="grid-column:1/-1;padding-left:0;font-size:10px">Microentitate: 1% din cifra de afaceri (if profit) or 16% standard</div></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /sp-f20 -->
+
+  <!-- F30 Informative -->
+  <div id="sp-f30" class="sub-pane">
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">I. Rezultat înregistrat</div>
+        <div class="bilant-row"><label>Unități cu profit</label><input type="number" id="f30-profit-units" value="0" oninput="R()"><span></span></div>
+        <div class="bilant-row"><label>Unități cu pierdere (nr.)</label><input type="number" id="f30-loss-units" value="1" oninput="R()"><input type="number" id="f30-loss-amt" value="7233" oninput="R()"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">III. Număr salariați</div>
+        <div class="bilant-row"><label>Număr mediu salariați</label><input type="number" id="f30-sal-med" value="0" oninput="R()"><span></span></div>
+        <div class="bilant-row"><label>Salariați la 31.12</label><input type="number" id="f30-sal-31" value="0" oninput="R()"><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FCF inputs -->
+  <div id="sp-fcf-inp" class="sub-pane">
+    <div class="info"><strong>Free Cash Flow</strong> = Net income + D&A − ΔWorking Capital − CapEx<br>
+    Fill in the items below not already captured in F10/F20.</div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Capital expenditure (CapEx)</div>
+        <div class="bilant-row"><label>CapEx — investments in fixed assets</label><span></span><input type="number" id="fcf-capex" value="0" oninput="R()"></div>
+        <div class="bilant-row"><label>Proceeds from asset disposals</label><span></span><input type="number" id="fcf-disposal" value="0" oninput="R()"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Working capital adjustments</div>
+        <div class="hint">Calculated automatically from F10 balance sheet changes. Override below if needed.</div>
+        <div class="bilant-row"><label>Δ Receivables (manual override)</label><span></span><input type="number" id="fcf-rec-override" value="" oninput="R()" placeholder="auto"></div>
+        <div class="bilant-row"><label>Δ Payables (manual override)</label><span></span><input type="number" id="fcf-pay-override" value="" oninput="R()" placeholder="auto"></div>
+        <div class="bilant-row"><label>Δ Inventory (manual override)</label><span></span><input type="number" id="fcf-inv-override" value="" oninput="R()" placeholder="auto"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-bilant -->
+
+<!-- ══════════════════════════════════════════════════════
+     REVENUE (custom)
+     ══════════════════════════════════════════════════════ -->
+<div id="page-revenue" class="page">
+  <div class="page-title">Revenue</div>
+  <div class="page-sub">Custom revenue inputs. Switch "Data source" to Custom to use these in P&L output.</div>
+  <div class="card">
+    <div class="card-title">Revenue streams</div>
+    <table class="tbl">
+      <thead><tr><th style="width:42%">Description</th><th class="r" style="width:20%">Amount</th><th style="width:20%">Mode</th><th style="width:12%">Calc</th><th style="width:6%"></th></tr></thead>
+      <tbody id="b-rev"></tbody>
+      <tfoot><tr><td colspan="3">Gross revenue</td><td class="r" id="f-grossrev">—</td><td></td></tr></tfoot>
+    </table>
+    <button class="add-btn" onclick="addRow('b-rev','fixed')">+ Add revenue line</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Deductions <span style="font-size:11px;font-weight:400;color:#bbb">Returns, refunds, discounts off list price — skip if you enter net revenue</span></div>
+    <table class="tbl">
+      <thead><tr><th style="width:42%">Description</th><th class="r" style="width:20%">Value</th><th style="width:20%">Mode</th><th style="width:12%">Calc</th><th style="width:6%"></th></tr></thead>
+      <tbody id="b-ded"></tbody>
+      <tfoot><tr><td colspan="3">Total deductions</td><td class="r" id="f-ded" style="color:#e24b4a">—</td><td></td></tr></tfoot>
+    </table>
+    <button class="add-btn" onclick="addRow('b-ded','pct-gross')">+ Add deduction line</button>
+  </div>
+  <div class="card highlight"><div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700"><span>Net revenue</span><span id="disp-netrev">—</span></div></div>
+</div>
+
+<!-- COGS -->
+<div id="page-cogs" class="page">
+  <div class="page-title">Cost of Goods Sold</div>
+  <div class="page-sub">Direct costs. Variable costs work best as % of net revenue.</div>
+  <div class="card">
+    <div class="card-title">COGS line items</div>
+    <table class="tbl">
+      <thead><tr><th style="width:42%">Description</th><th class="r" style="width:20%">Value</th><th style="width:20%">Mode</th><th style="width:12%">Calc</th><th style="width:6%"></th></tr></thead>
+      <tbody id="b-cogs"></tbody>
+      <tfoot>
+        <tr><td colspan="3">Total COGS</td><td class="r" id="f-cogs" style="color:#e24b4a">—</td><td></td></tr>
+        <tr class="tsub"><td colspan="3">Gross profit</td><td class="r" id="f-gp">—</td><td></td></tr>
+        <tr class="tsub"><td colspan="3" style="color:#bbb;font-size:11px">Gross margin %</td><td class="r" id="f-gm" style="color:#bbb;font-size:11px">—</td><td></td></tr>
+      </tfoot>
+    </table>
+    <button class="add-btn" onclick="addRow('b-cogs','pct-net')">+ Add COGS line</button>
+  </div>
+</div>
+
+<!-- CAC -->
+<div id="page-cac" class="page">
+  <div class="page-title">CAC Inputs — Fully Burdened</div>
+  <div class="page-sub">Every cost that goes into acquiring a customer.</div>
+  <div class="info"><strong>Fully-burdened CAC</strong> = (Ad spend + S&M salaries + Commissions + Sales software + Allocated overhead + Agency fees) ÷ New paying customers<br>
+  <strong>Hormozi rule:</strong> include everything in the attract→convert funnel. Executive time selling = include that % of their salary.</div>
+  <div class="g2">
+    <div class="card"><div class="card-title">Paid advertising</div>
+      <table class="tbl"><thead><tr><th>Channel</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-ads"></tbody>
+      <tfoot><tr><td colspan="2">Total ad spend</td><td class="r" id="f-ads">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-ads')">+ Add channel</button></div>
+    <div class="card"><div class="card-title">Sales &amp; marketing salaries</div>
+      <table class="tbl"><thead><tr><th>Role</th><th class="r">Annual cost</th><th></th></tr></thead><tbody id="b-sal"></tbody>
+      <tfoot><tr><td colspan="2">Total salaries</td><td class="r" id="f-sal">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-sal')">+ Add role</button></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-title">Commissions &amp; bonuses</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-comm"></tbody>
+      <tfoot><tr><td colspan="2">Total commissions</td><td class="r" id="f-comm">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-comm')">+ Add line</button></div>
+    <div class="card"><div class="card-title">Sales software &amp; tools</div>
+      <table class="tbl"><thead><tr><th>Tool</th><th class="r">Annual cost</th><th></th></tr></thead><tbody id="b-sw"></tbody>
+      <tfoot><tr><td colspan="2">Total software</td><td class="r" id="f-sw">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-sw')">+ Add tool</button></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-title">Agencies &amp; contractors</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-agency"></tbody>
+      <tfoot><tr><td colspan="2">Total agencies</td><td class="r" id="f-agency">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-agency')">+ Add line</button></div>
+    <div class="card"><div class="card-title">Allocated overhead</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-ovh"></tbody>
+      <tfoot><tr><td colspan="2">Total overhead</td><td class="r" id="f-ovh">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-ovh')">+ Add line</button></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Customer counts</div>
+    <div class="g2">
+      <div class="field"><label>Total new paying customers (period)</label><input type="number" id="v-newcust" value="10" oninput="R()"><div class="hint">All paying customers — paid + organic + referral</div></div>
+      <div class="field"><label>Of which: purely organic / zero-cost</label><input type="number" id="v-organic" value="0" oninput="R()"><div class="hint">Set 0 to use total as denominator (conservative)</div></div>
+    </div>
+  </div>
+  <div class="card highlight">
+    <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;margin-bottom:6px"><span>Total CAC pool</span><span id="disp-cac-pool">—</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:6px"><span>Paying customers (denominator)</span><span id="disp-cac-denom">—</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:18px;font-weight:700;padding-top:8px;border-top:1px solid #b8d8c4"><span>Fully-burdened CAC</span><span id="disp-cac" style="color:#1a9e75">—</span></div>
+  </div>
+</div>
+
+<!-- OPEX -->
+<div id="page-opex" class="page">
+  <div class="page-title">Other Operating Expenses</div>
+  <div class="page-sub">Costs to run the business not in COGS or CAC.</div>
+  <div class="g2">
+    <div class="card"><div class="card-title">People &amp; facilities (non-sales)</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-ppl"></tbody>
+      <tfoot><tr><td colspan="2">Subtotal</td><td class="r" id="f-ppl">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-ppl')">+ Add line</button></div>
+    <div class="card"><div class="card-title">Technology &amp; software (non-sales)</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-tech"></tbody>
+      <tfoot><tr><td colspan="2">Subtotal</td><td class="r" id="f-tech">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-tech')">+ Add line</button></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="card-title">General &amp; admin</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-ga"></tbody>
+      <tfoot><tr><td colspan="2">Subtotal</td><td class="r" id="f-ga">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-ga')">+ Add line</button></div>
+    <div class="card"><div class="card-title">Depreciation &amp; amortisation</div>
+      <table class="tbl"><thead><tr><th>Description</th><th class="r">Amount</th><th></th></tr></thead><tbody id="b-da"></tbody>
+      <tfoot><tr><td colspan="2">Total D&amp;A</td><td class="r" id="f-da">—</td></tr></tfoot></table>
+      <button class="add-btn" onclick="addRow2('b-da')">+ Add line</button></div>
+  </div>
+  <div class="card"><div class="card-title">Interest &amp; tax</div>
+    <div class="g2">
+      <div class="field"><label>Interest expense / period</label><input type="number" id="v-interest" value="0" oninput="R()"></div>
+      <div class="field"><label>Tax rate (%)</label><input type="number" id="v-taxrate" value="21" min="0" max="80" oninput="R()"></div>
+    </div>
+  </div>
+</div>
+
+<!-- LTV -->
+<div id="page-ltv" class="page">
+  <div class="page-title">LTV / LTGP Inputs</div>
+  <div class="page-sub">Lifetime Gross Profit — Hormozi's preferred metric.</div>
+  <div class="info"><strong>LTGP</strong> = (ARPU + expansion) × gross margin per customer ÷ churn rate<br>
+  <strong>Hormozi benchmarks:</strong> 3:1 (pure SaaS) · 6:1 (human-assisted) · 9:1+ (high-touch service) · 20–30:1 (manual service business)</div>
+  <div class="g2">
+    <div class="card"><div class="card-title">Revenue per customer</div>
+      <div class="field"><label>ARPU — avg revenue / customer / year</label><input type="number" id="v-arpu" value="3179" oninput="R()"><div class="hint">Pre-filled: CAN ÷ estimated customers from Bilanț</div></div>
+      <div class="field"><label>Expansion / upsell / year</label><input type="number" id="v-expansion" value="0" oninput="R()"></div>
+      <div class="field"><label>Gross margin per customer (%)</label><input type="number" id="v-custgm" value="80" min="0" max="100" oninput="R()"><div class="hint">Advisory services typically 70–90%</div></div>
+    </div>
+    <div class="card"><div class="card-title">Retention &amp; churn</div>
+      <div class="field"><label>Annual churn rate (%)</label><input type="number" id="v-churn" value="30" min="0" max="100" oninput="R()"></div>
+      <div class="field"><label>Discount rate / cost of capital (%)</label><input type="number" id="v-discount" value="15" min="0" max="50" oninput="R()"><div class="hint">NPV-adjusted LTV. 15% typical for Romania SME.</div></div>
+    </div>
+  </div>
+  <div class="card highlight"><div class="card-title">LTV / LTGP preview</div>
+    <div class="kgrid" id="ltv-kpis"></div>
+    <div id="ltv-signals"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     P&L OUTPUT
+     ══════════════════════════════════════════════════════ -->
+<div id="page-pl" class="page">
+  <div class="page-title">P&L Statement</div>
+  <div class="page-sub" id="pl-source-label">Source: Bilanț 2025 (F10 + F20)</div>
+  <div id="pl-alert"></div>
+  <div class="kgrid" id="pl-kpis"></div>
+  <div class="card"><div class="card-title">Income statement</div><table class="plt" id="pl-tbl"></table></div>
+</div>
+
+<!-- UNIT ECONOMICS -->
+<div id="page-unit" class="page">
+  <div class="page-title">Unit Economics</div>
+  <div class="page-sub">CAC · LTV · LTV:CAC · Payback</div>
+  <div class="kgrid" id="unit-kpis"></div>
+  <div class="card" id="unit-detail"></div>
+  <div class="card" id="cac-breakdown"></div>
+</div>
+
+<!-- FREE CASH FLOW -->
+<div id="page-fcf" class="page">
+  <div class="page-title">Free Cash Flow</div>
+  <div class="page-sub">Operating cash flow, investing activities, and free cash flow.</div>
+  <div id="fcf-alert"></div>
+  <div class="kgrid" id="fcf-kpis"></div>
+  <div class="card"><div class="card-title">Cash flow statement</div><table class="plt" id="fcf-tbl"></table></div>
+  <div class="card" id="fcf-notes"></div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── Navigation ──────────────────────────────────────────────────────
+function SP(name,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  if(el)el.classList.add('active');
+  R();
+}
+function SST(name,el){
+  document.querySelectorAll('.sub-pane').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('sp-'+name).classList.add('active');
+  document.querySelectorAll('.sub-tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  R();
+}
+
+// ── Formatting ──────────────────────────────────────────────────────
+function getCur(){return document.getElementById('g-cur').value;}
+function fmt(n,forceSign){
+  var c=getCur(),a=Math.abs(n),s,sign=n<0?'-':(forceSign&&n>0?'+':'');
+  if(a>=1e6)s=(a/1e6).toFixed(2)+'M';
+  else if(a>=1e3)s=(a/1e3).toFixed(1)+'K';
+  else s=a.toFixed(0);
+  return sign+c+s;
+}
+function fmtN(n){return n<0?'('+fmt(-n)+')':fmt(n);}
+function pct(v,b){return b===0?'—':(v/b*100).toFixed(1)+'%';}
+function st(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
+function ih(id,v){var e=document.getElementById(id);if(e)e.innerHTML=v;}
+function gv(id){var e=document.getElementById(id);if(!e)return 0;var v=parseFloat(e.value);return isNaN(v)?0:v;}
+function gvOpt(id){var e=document.getElementById(id);if(!e)return null;var v=parseFloat(e.value);return isNaN(v)?null:v;}
+
+// ── Row builders ────────────────────────────────────────────────────
+function addRow(tbodyId,defaultMode,desc,amt,mode){
+  desc=desc||''; amt=(amt!==undefined&&amt!==null)?amt:''; mode=mode||defaultMode||'fixed';
+  var tb=document.getElementById(tbodyId); if(!tb)return;
+  var tr=document.createElement('tr');
+  function td(el){var t=document.createElement('td');t.appendChild(el);return t;}
+  var i1=document.createElement('input');i1.type='text';i1.className='cell';i1.placeholder='Description';i1.value=desc;i1.addEventListener('input',R);
+  var i2=document.createElement('input');i2.type='number';i2.className='cell';i2.placeholder='0';i2.value=amt;i2.addEventListener('input',R);
+  var sel=document.createElement('select');sel.className='cell';
+  var opts=tbodyId==='b-ded'?[['fixed','Fixed'],['pct-gross','% gross rev']]:
+            tbodyId==='b-cogs'?[['fixed','Fixed'],['pct-net','% net rev'],['pct-gross','% gross rev']]:
+            [['fixed','Fixed'],['pct-net','% net rev']];
+  opts.forEach(function(o){var op=document.createElement('option');op.value=o[0];op.textContent=o[1];sel.appendChild(op);});
+  sel.value=mode;sel.addEventListener('change',R);
+  var comp=document.createElement('td');comp.className='comp-cell';comp.setAttribute('data-c','1');
+  var x=document.createElement('button');x.className='del-btn';x.textContent='×';x.onclick=function(){tr.remove();R();};
+  tr.appendChild(td(i1));tr.appendChild(td(i2));tr.appendChild(td(sel));tr.appendChild(comp);
+  var xt=document.createElement('td');xt.appendChild(x);tr.appendChild(xt);
+  tb.appendChild(tr);R();
+}
+function addRow2(tbodyId,desc,amt){
+  desc=desc||''; amt=(amt!==undefined&&amt!==null)?amt:'';
+  var tb=document.getElementById(tbodyId); if(!tb)return;
+  var tr=document.createElement('tr');
+  function td(el){var t=document.createElement('td');t.appendChild(el);return t;}
+  var i1=document.createElement('input');i1.type='text';i1.className='cell';i1.placeholder='Description';i1.value=desc;i1.addEventListener('input',R);
+  var i2=document.createElement('input');i2.type='number';i2.className='cell';i2.placeholder='0';i2.value=amt;i2.addEventListener('input',R);
+  var x=document.createElement('button');x.className='del-btn';x.textContent='×';x.onclick=function(){tr.remove();R();};
+  tr.appendChild(td(i1));tr.appendChild(td(i2));
+  var xt=document.createElement('td');xt.appendChild(x);tr.appendChild(xt);
+  tb.appendChild(tr);R();
+}
+
+function sumBody(id,netRev,grossRev){
+  var total=0,tb=document.getElementById(id);if(!tb)return 0;
+  tb.querySelectorAll('tr').forEach(function(tr){
+    var inp=tr.querySelectorAll('input[type=number]');if(!inp.length)return;
+    var a=parseFloat(inp[0].value)||0,sel=tr.querySelector('select'),mode=sel?sel.value:'fixed';
+    var c=mode==='pct-gross'?grossRev*(a/100):mode==='pct-net'?netRev*(a/100):a;
+    total+=c;
+    var cc=tr.querySelector('[data-c]');if(cc)cc.textContent=mode!=='fixed'?fmt(c):'';
+  });
+  return total;
+}
+function sum2(id){var t=0,tb=document.getElementById(id);if(!tb)return 0;
+  tb.querySelectorAll('tr').forEach(function(tr){var inp=tr.querySelectorAll('input[type=number]');if(inp.length)t+=parseFloat(inp[0].value)||0;});return t;}
+
+// ── KPI card helper ─────────────────────────────────────────────────
+function kc(l,v,s,cls){return '<div class="kcard'+(cls==='accent'?' accent':'')+'"><div class="klbl">'+l+'</div><div class="kval '+(cls&&cls!=='accent'?cls:'')+'">'+v+'</div>'+(s?'<div class="ksub">'+s+'</div>':'')+'</div>';}
+
+// ── P&L row helpers ─────────────────────────────────────────────────
+function plr(l,v,col,ind,sub,tot){return '<tr class="'+(tot?'tot':sub?'sub':ind?'ind':'')+'"><td>'+l+'</td><td style="color:'+(col||'inherit')+'">'+v+'</td></tr>';}
+function plm(l,v){return '<tr class="marg"><td>'+l+'</td><td>'+v+'</td></tr>';}
+function pls(l){return '<tr class="sec"><td colspan="2">'+l+'</td></tr>';}
+
+// ══════════════════════════════════════════════════════════════════
+// MAIN RECALC
+// ══════════════════════════════════════════════════════════════════
+function R(){
+  var src=document.getElementById('g-source').value;
+
+  // ── Bilanț / F20 values ──────────────────────────────────────
+  var can    =gv('f20-can');      // Cifra de afaceri netă 2025
+  var canPrev=gv('f20-can-prev');
+  var ave    =gv('f20-ave');      // Alte venituri exploatare
+  var mat    =gv('f20-mat');      // Materiale
+  var sal    =gv('f20-sal');      // Personal
+  var amort  =gv('f20-amort');    // Amortizare
+  var alte   =gv('f20-alte');     // Alte cheltuieli
+  var imp    =gv('f20-imp');      // Impozite și taxe
+  var imp794 =gv('f20-imp794');
+  var bInt   =gv('f20-int');
+  var bTaxAmt=gv('f20-tax-amt');
+  var bTaxRate=gv('f20-taxrate');
+
+  var tve=can+ave;
+  var tce=mat+sal+amort+alte+imp;
+  var rezBrut=tve-tce+imp794;
+  var bTax=bTaxAmt>0?bTaxAmt:Math.max(rezBrut,0)*(bTaxRate/100);
+  var rezNet=rezBrut-bTax;
+  var profNet=rezNet>=0?rezNet:0;
+  var pierdere=rezNet<0?-rezNet:0;
+
+  // Update F20 summary cells
+  st('bc-tve-prev',fmt(canPrev+gv('f20-ave-prev')));
+  st('bc-tve',fmt(tve));
+  st('bc-tce-prev',fmt(gv('f20-mat-prev')+gv('f20-sal-prev')+gv('f20-amort-prev')+gv('f20-alte-prev')+gv('f20-imp-prev')));
+  st('bc-tce',fmt(tce));
+  st('bc-profnet-prev',rezNet>=0?fmt(0):fmt(0));
+  st('bc-profnet',profNet>0?fmt(profNet):fmt(0));
+  st('bc-pierdere-prev',fmt(gv('f20-alte-prev')+gv('f20-mat-prev')));
+  st('bc-pierdere',fmt(pierdere));
+
+  // F20 observations
+  var obs='';
+  if(can>0&&can<50000)obs+='• Microentitate — cifra de afaceri netă: '+fmt(can)+' LEI<br>';
+  if(sal===0)obs+='• Cheltuieli cu personalul: 0 — probabil fără angajați (confirmat F30)<br>';
+  if(alte>can)obs+='• <strong>Alte cheltuieli ('+fmt(alte)+') depășesc cifra de afaceri</strong> — cost structure needs review<br>';
+  if(rezNet<0)obs+='• Pierdere netă: '+fmt(Math.abs(rezNet))+' LEI pentru 2025 ('+fmt(Math.abs(gv('f20-alte-prev')+gv('f20-mat-prev')))+' în 2024)<br>';
+  if(mat>0)obs+='• Costul materiei prime: '+fmt(mat)+' LEI ('+pct(mat,can)+' din CA)<br>';
+  ih('f20-obs',obs||'• No significant anomalies detected.');
+
+  // Balance sheet calculated fields
+  var imobPrev=gv('b-incorp-prev')+gv('b-corp-prev')+gv('b-ifin-prev');
+  var imob=gv('b-incorp')+gv('b-corp')+gv('b-ifin');
+  var circPrev=gv('b-stoc-prev')+gv('b-creante-prev')+gv('b-inv-prev')+gv('b-casa-prev');
+  var circ=gv('b-stoc')+gv('b-creante')+gv('b-inv')+gv('b-casa');
+  var acnPrev=circPrev-gv('b-dat1-prev');
+  var acn=circ-gv('b-dat1');
+  var tatdcPrev=imobPrev+acnPrev;
+  var tatdc=imob+acn;
+  var capPropPrev=gv('b-cap-prev')+gv('b-prime-prev')+gv('b-reeval-prev')+gv('b-rez-prev')+gv('b-profrap-c-prev')-gv('b-profrap-d-prev')+gv('b-profex-c-prev')-gv('b-profex-d-prev');
+  var capProp=gv('b-cap')+gv('b-prime')+gv('b-reeval')+gv('b-rez')+gv('b-profrap-c')-gv('b-profrap-d')+gv('b-profex-c')-gv('b-profex-d');
+
+  st('bc-imob-prev',fmt(imobPrev));st('bc-imob',fmt(imob));
+  st('bc-circ-prev',fmt(circPrev));st('bc-circ',fmt(circ));
+  st('bc-acn-prev',fmt(acnPrev));st('bc-acn',fmt(acn));
+  st('bc-tatdc-prev',fmt(tatdcPrev));st('bc-tatdc',fmt(tatdc));
+  st('bc-cap-prev',fmt(capPropPrev));st('bc-cap',fmt(capProp));
+  st('bc-captot-prev',fmt(capPropPrev+gv('b-dat-lng-prev')+gv('b-prov-prev')+gv('b-venav-prev')));
+  st('bc-captot',fmt(capProp+gv('b-dat-lng')+gv('b-prov')+gv('b-venav')));
+
+  // ── Custom inputs ──────────────────────────────────────────
+  var customGrossRev=sumBody('b-rev',0,1e15);
+  var customDed=sumBody('b-ded',customGrossRev,customGrossRev);
+  var customNetRev=customGrossRev-customDed;
+  var customCogs=sumBody('b-cogs',customNetRev,customGrossRev);
+  var customGP=customNetRev-customCogs;
+  var customGM=customNetRev>0?customGP/customNetRev*100:0;
+  st('f-grossrev',fmt(customGrossRev));st('f-ded',customDed>0?'-'+fmt(customDed):fmt(0));
+  st('disp-netrev',fmt(customNetRev));
+  st('f-cogs','-'+fmt(customCogs));st('f-gp',fmt(customGP));st('f-gm',pct(customGP,customNetRev));
+
+  // ── Determine which data source feeds outputs ──────────────
+  var netRev,grossRev,gp,gm,totalDA,totalOpex,cacPool,interest,tax,ni,ebitda,ebit,ebt;
+
+  if(src==='bilant'){
+    grossRev=can; // CAN is already net revenue in Romanian GAAP
+    netRev=can;
+    var totalCosts=mat+sal+amort+alte+imp;
+    gp=netRev-(mat+sal+alte+imp); // exclude amort for gross profit
+    gm=netRev>0?gp/netRev*100:0;
+    totalDA=amort;
+    totalOpex=alte+imp+sal; // simplified
+    cacPool=0; // not in F20
+    interest=bInt;
+    tax=bTax;
+    ni=rezNet;
+    ebitda=netRev-(mat+alte+imp+sal);
+    ebit=ebitda-amort;
+    ebt=ebit-bInt;
+  } else {
+    var ads=sum2('b-ads'),salC=sum2('b-sal'),comm=sum2('b-comm'),sw=sum2('b-sw'),agency=sum2('b-agency'),ovh=sum2('b-ovh');
+    cacPool=ads+salC+comm+sw+agency+ovh;
+    grossRev=customGrossRev; netRev=customNetRev; gp=customGP; gm=customGM;
+    totalDA=sum2('b-da');
+    totalOpex=sum2('b-ppl')+sum2('b-tech')+sum2('b-ga');
+    interest=gv('v-interest');
+    ebitda=gp-cacPool-totalOpex;
+    ebit=ebitda-totalDA;
+    ebt=ebit-interest;
+    var tRate=gv('v-taxrate');
+    tax=ebt>0?ebt*tRate/100:0;
+    ni=ebt-tax;
+  }
+
+  // ── CAC (works regardless of source) ─────────────────────
+  var ads2=sum2('b-ads'),sal2=sum2('b-sal'),comm2=sum2('b-comm'),sw2=sum2('b-sw'),agency2=sum2('b-agency'),ovh2=sum2('b-ovh');
+  var cacPoolDisp=ads2+sal2+comm2+sw2+agency2+ovh2;
+  var newCust=gv('v-newcust'),organic=gv('v-organic');
+  var paidCust=Math.max(newCust-organic,1);
+  var cac=cacPoolDisp>0?cacPoolDisp/paidCust:0;
+  st('f-ads',fmt(ads2));st('f-sal',fmt(sal2));st('f-comm',fmt(comm2));st('f-sw',fmt(sw2));st('f-agency',fmt(agency2));st('f-ovh',fmt(ovh2));
+  st('disp-cac-pool',fmt(cacPoolDisp));
+  st('disp-cac-denom',paidCust+' customers');
+  st('disp-cac',cac>0?fmt(cac):'(enter CAC pool above)');
+
+  // ── LTV / LTGP ────────────────────────────────────────────
+  var arpu=gv('v-arpu'),expansion=gv('v-expansion'),custGm=gv('v-custgm'),churn=gv('v-churn'),discR=gv('v-discount');
+  var totalArpu=arpu+expansion;
+  var annualGP=totalArpu*(custGm/100);
+  var lifetime=churn>0?100/churn:10;
+  var ltgp=churn>0?annualGP/(churn/100):annualGP*10;
+  var ltgpNPV=discR>0?annualGP/((churn/100)+(discR/100)):ltgp;
+  var ltvCac=cac>0?ltgp/cac:0;
+  var ltvCacNPV=cac>0?ltgpNPV/cac:0;
+  var payback=cac>0&&annualGP>0?cac/(annualGP/12):0;
+  var ltvColor=ltvCac>=3?'pos':ltvCac>=1?'wrn':'neg';
+  var pbColor=payback<=12?'pos':payback<=24?'wrn':'neg';
+  var ltvSig=ltvCac>=9?['Excellent 9:1+','g','Hormozi-grade. Outspend any competitor.']:
+    ltvCac>=6?['Strong 6:1+','g','Healthy for human-touch businesses.']:
+    ltvCac>=3?['Healthy 3:1+','g','Venture benchmark for SaaS / automated.']:
+    ltvCac>=1.5?['Marginal','a','Thin. Optimise before scaling hard.']:
+    cac===0?['Enter CAC pool','a','Fill in CAC inputs tab to see this ratio.']:
+    ['Danger','r','Destroying value per customer. Fix before spending more.'];
+
+  ih('ltv-kpis',
+    kc('Annual GP / customer',fmt(annualGP),'after customer margin','')+
+    kc('LTGP (simple)',fmt(ltgp),'gross profit LTV','')+
+    kc('LTGP (NPV-adj)',fmt(ltgpNPV),'discounted at '+discR+'%','')+
+    kc('Lifetime',lifetime.toFixed(1)+' yrs','at '+churn+'% churn','')
+  );
+  ih('ltv-signals',
+    '<div class="urow"><span>LTV:CAC signal</span><span><span class="badge '+ltvSig[1]+'">'+ltvSig[0]+'</span></span></div>'+
+    '<div class="rbar"><div class="rfill" style="width:'+Math.min(ltvCac/10*100,100).toFixed(1)+'%;background:'+(ltvCac>=6?'#1a9e75':ltvCac>=3?'#5a9e6f':ltvCac>=1?'#e8a030':'#e24b4a')+'"></div></div>'+
+    '<div class="hint">'+ltvSig[2]+'</div>'+
+    '<div class="urow"><span>CAC payback</span><span><span class="badge '+(payback<=12?'g':payback<=24?'a':'r')+'">'+(payback<=12?'Healthy':payback<=24?'Acceptable':'Long')+' — '+payback.toFixed(1)+' months</span></span></div>'
+  );
+
+  // ── P&L output ────────────────────────────────────────────
+  st('pl-source-label','Source: '+(src==='bilant'?'Bilanț 2025 (F20) — values in LEI':'Custom inputs'));
+  var ebitdaMargin=netRev>0?ebitda/netRev*100:0;
+  ih('pl-alert',ebitda<0
+    ?'<div class="alert r">⚠ EBITDA negative — burning cash at operating level. Current model: alte cheltuieli ('+fmt(alte)+') exceed revenue ('+fmt(netRev)+').</div>'
+    :ebitdaMargin<10
+    ?'<div class="alert a">⚠ EBITDA margin below 10% — thin buffer.</div>'
+    :'<div class="alert g">✓ Operating fundamentals healthy. EBITDA margin: '+ebitdaMargin.toFixed(1)+'%</div>');
+
+  ih('pl-kpis',
+    kc('Net revenue',fmt(netRev),'','')+
+    kc('Gross profit',fmt(gp),pct(gp,netRev)+' margin',gm>=50?'pos':gm>=30?'wrn':'neg')+
+    kc('EBITDA',fmt(ebitda),pct(ebitda,netRev)+' margin',ebitda>=0?'pos':'neg')+
+    kc('EBIT',fmt(ebit),pct(ebit,netRev)+' margin',ebit>=0?'pos':'neg')+
+    kc('Net income',fmt(ni),pct(ni,netRev)+' margin',ni>=0?'pos':'neg')+
+    (cac>0?kc('LTV:CAC',ltvCac.toFixed(2)+'×','',ltvColor):'')
+  );
+
+  var tbl='';
+  if(src==='bilant'){
+    tbl+=pls('Venituri (Revenue — F20)');
+    tbl+=plr('Cifra de afaceri netă (net revenue)',fmt(can),'','','',false);
+    tbl+=plr('Alte venituri exploatare',fmt(ave),'',true,'',false);
+    tbl+=plr('Total venituri exploatare',fmt(tve),tve>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=pls('Cheltuieli exploatare (F20)');
+    tbl+=plr('Cost materii prime / consumabile',mat>0?'-'+fmt(mat):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('Cheltuieli cu personalul',sal>0?'-'+fmt(sal):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('Alte cheltuieli exploatare',alte>0?'-'+fmt(alte):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('Impozite și taxe',imp>0?'-'+fmt(imp):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('EBITDA',fmt(ebitda),ebitda>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=plm('EBITDA margin',pct(ebitda,netRev));
+    tbl+=pls('Below EBITDA');
+    tbl+=plr('Ajustări de valoare / amortizare (D&A)',amort>0?'-'+fmt(amort):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('EBIT (rezultat din exploatare)',fmt(ebit),ebit>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=plm('EBIT margin',pct(ebit,netRev));
+    tbl+=pls('Finanțare și impozit');
+    tbl+=plr('Dobânzi (interest)',bInt>0?'-'+fmt(bInt):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('EBT (pre-tax)',fmt(ebt),ebt>=0?'#1a9e75':'#e24b4a','','',false);
+    tbl+=plr('Impozit pe profit / venit',bTax>0?'-'+fmt(bTax):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr(ni>=0?'Profit net':'Pierdere netă',fmt(Math.abs(ni)),ni>=0?'#1a9e75':'#e24b4a','','',true);
+    tbl+=plm('Net margin',pct(ni,netRev));
+  } else {
+    tbl+=pls('Revenue');
+    tbl+=plr('Gross revenue',fmt(grossRev),'','','',false);
+    tbl+=plr('Deductions',customDed>0?'-'+fmt(customDed):fmt(0),'#e24b4a',true,'',false);
+    tbl+=plr('Net revenue',fmt(netRev),netRev>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=pls('Cost of goods sold');
+    tbl+=plr('Total COGS','-'+fmt(customCogs),'#e24b4a',true,'',false);
+    tbl+=plr('Gross profit',fmt(gp),gp>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=plm('Gross margin',pct(gp,netRev));
+    tbl+=pls('Customer acquisition (fully burdened)');
+    tbl+=plr('Total CAC pool','-'+fmt(cacPoolDisp),'#e24b4a',true,'',false);
+    tbl+=pls('Other operating expenses');
+    tbl+=plr('People & facilities','-'+fmt(sum2('b-ppl')),'#e24b4a',true,'',false);
+    tbl+=plr('Technology & software','-'+fmt(sum2('b-tech')),'#e24b4a',true,'',false);
+    tbl+=plr('General & admin','-'+fmt(sum2('b-ga')),'#e24b4a',true,'',false);
+    tbl+=plr('EBITDA',fmt(ebitda),ebitda>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=plm('EBITDA margin',pct(ebitda,netRev));
+    tbl+=plr('D&A','-'+fmt(totalDA),'#e24b4a',true,'',false);
+    tbl+=plr('EBIT',fmt(ebit),ebit>=0?'#1a9e75':'#e24b4a','',true,false);
+    tbl+=plm('EBIT margin',pct(ebit,netRev));
+    tbl+=plr('Interest','-'+fmt(interest),'#e24b4a',true,'',false);
+    tbl+=plr('EBT',fmt(ebt),ebt>=0?'#1a9e75':'#e24b4a','','',false);
+    tbl+=plr('Tax','-'+fmt(tax),'#e24b4a',true,'',false);
+    tbl+=plr('Net income',fmt(ni),ni>=0?'#1a9e75':'#e24b4a','','',true);
+    tbl+=plm('Net margin',pct(ni,netRev));
+  }
+  ih('pl-tbl',tbl);
+
+  // ── Unit economics output ────────────────────────────────
+  ih('unit-kpis',
+    kc('Fully-burdened CAC',cac>0?fmt(cac):'N/A','per paying customer','')+
+    kc('LTGP (simple)',fmt(ltgp),'gross profit LTV','')+
+    kc('LTGP (NPV-adj)',fmt(ltgpNPV),'discounted','')+
+    kc('LTV:CAC (simple)',ltvCac>0?ltvCac.toFixed(2)+'×':'N/A','',ltvColor)+
+    kc('LTV:CAC (NPV)',ltvCacNPV>0?ltvCacNPV.toFixed(2)+'×':'N/A','',ltvCacNPV>=3?'pos':ltvCacNPV>=1?'wrn':'neg')+
+    kc('Payback',payback>0?payback.toFixed(1)+' mo':'N/A','target < 12 mo',pbColor)
+  );
+
+  var ud='<div class="card-title">LTGP analysis</div>';
+  ud+='<div class="urow bold"><span>LTV:CAC verdict</span><span><span class="badge '+ltvSig[1]+'">'+ltvSig[0]+'</span></span></div>';
+  ud+='<div class="rbar"><div class="rfill" style="width:'+Math.min(ltvCac/10*100,100).toFixed(1)+'%;background:'+(ltvCac>=6?'#1a9e75':ltvCac>=3?'#5a9e6f':ltvCac>=1?'#e8a030':'#e24b4a')+'"></div></div>';
+  ud+='<div class="hint">'+ltvSig[2]+'</div>';
+  ud+='<div class="urow"><span>ARPU</span><span>'+fmt(totalArpu)+' / yr</span></div>';
+  ud+='<div class="urow"><span>Annual GP / customer</span><span>'+fmt(annualGP)+' / yr</span></div>';
+  ud+='<div class="urow"><span>Customer gross margin</span><span>'+custGm.toFixed(1)+'%</span></div>';
+  ud+='<div class="urow"><span>Annual churn</span><span>'+churn.toFixed(1)+'%</span></div>';
+  ud+='<div class="urow"><span>Implied customer lifetime</span><span>'+lifetime.toFixed(1)+' years</span></div>';
+  ud+='<div class="urow bold"><span>LTGP simple</span><span>'+fmt(ltgp)+'</span></div>';
+  ud+='<div class="urow bold"><span>LTGP NPV-adjusted</span><span>'+fmt(ltgpNPV)+'</span></div>';
+  ud+='<div class="urow"><span>CAC payback</span><span>'+(payback>0?payback.toFixed(1)+' months':'N/A')+'</span></div>';
+  ih('unit-detail',ud);
+
+  var cb='<div class="card-title">CAC breakdown</div>';
+  cb+='<div class="urow"><span>Paid advertising</span><span>'+fmt(ads2)+'</span></div>';
+  cb+='<div class="urow"><span>S&M salaries</span><span>'+fmt(sal2)+'</span></div>';
+  cb+='<div class="urow"><span>Commissions & bonuses</span><span>'+fmt(comm2)+'</span></div>';
+  cb+='<div class="urow"><span>Sales software</span><span>'+fmt(sw2)+'</span></div>';
+  cb+='<div class="urow"><span>Agencies & contractors</span><span>'+fmt(agency2)+'</span></div>';
+  cb+='<div class="urow"><span>Allocated overhead</span><span>'+fmt(ovh2)+'</span></div>';
+  cb+='<div class="urow bold"><span>Total CAC pool</span><span>'+fmt(cacPoolDisp)+'</span></div>';
+  cb+='<div class="urow"><span>÷ Paying customers</span><span>'+paidCust+'</span></div>';
+  cb+='<div class="urow bold"><span>= Fully-burdened CAC</span><span>'+(cac>0?fmt(cac):'N/A — enter CAC pool')+'</span></div>';
+  ih('cac-breakdown',cb);
+
+  // ── FREE CASH FLOW ────────────────────────────────────────
+  // Working capital from F10
+  var dCreante=gv('b-creante')-gv('b-creante-prev'); // increase in receivables = cash use
+  var dStoc=gv('b-stoc')-gv('b-stoc-prev');
+  var dDat1=gv('b-dat1')-gv('b-dat1-prev'); // increase in payables = cash source
+  var recOvr=gvOpt('fcf-rec-override'),payOvr=gvOpt('fcf-pay-override'),invOvr=gvOpt('fcf-inv-override');
+  var deltaRec=recOvr!==null?recOvr:-dCreante;  // +ve = source if receivables decrease
+  var deltaPay=payOvr!==null?payOvr:dDat1;
+  var deltaInv=invOvr!==null?invOvr:-dStoc;
+  var deltaWC=deltaRec+deltaPay+deltaInv;
+  var capex=gv('fcf-capex');
+  var disposal=gv('fcf-disposal');
+
+  var da_fcf=src==='bilant'?amort:sum2('b-da');
+  var operatingCF=ni+da_fcf+deltaWC;
+  var investingCF=-capex+disposal;
+  var fcf=operatingCF+investingCF;
+
+  var fcfColor=fcf>=0?'pos':'neg';
+  ih('fcf-alert',fcf>=0
+    ?'<div class="alert g">✓ Positive free cash flow: '+fmt(fcf)+'</div>'
+    :'<div class="alert r">⚠ Negative FCF: '+fmt(fcf)+' — the business is consuming cash. This is expected in early-stage companies.</div>');
+
+  ih('fcf-kpis',
+    kc('Net income',fmt(ni),'',ni>=0?'pos':'neg')+
+    kc('D&A add-back',fmt(da_fcf),'non-cash','')+
+    kc('Δ Working capital',fmt(deltaWC),deltaWC>=0?'source of cash':'use of cash',deltaWC>=0?'pos':'neg')+
+    kc('Operating CF',fmt(operatingCF),'',operatingCF>=0?'pos':'neg')+
+    kc('CapEx','-'+fmt(capex),'investing','neg')+
+    kc('Free cash flow',fmt(fcf),'',fcfColor)
+  );
+
+  var ft='';
+  ft+=pls('Operating activities');
+  ft+=plr('Net income / (loss)',fmt(ni),ni>=0?'#1a9e75':'#e24b4a','','',false);
+  ft+=plr('Add: D&A (non-cash)',fmt(da_fcf),'#1a9e75',true,'',false);
+  ft+=pls('Working capital changes');
+  ft+=plr('Δ Receivables (increase = cash use)',fmt(deltaRec),deltaRec>=0?'#1a9e75':'#e24b4a',true,'',false);
+  ft+=plr('Δ Payables (increase = cash source)',fmt(deltaPay),deltaPay>=0?'#1a9e75':'#e24b4a',true,'',false);
+  ft+=plr('Δ Inventory',fmt(deltaInv),deltaInv>=0?'#1a9e75':'#e24b4a',true,'',false);
+  ft+=plr('Net working capital change',fmt(deltaWC),deltaWC>=0?'#1a9e75':'#e24b4a','',true,false);
+  ft+=plr('Cash from operations',fmt(operatingCF),operatingCF>=0?'#1a9e75':'#e24b4a','',true,false);
+  ft+=pls('Investing activities');
+  ft+=plr('Capital expenditure (CapEx)',capex>0?'-'+fmt(capex):fmt(0),'#e24b4a',true,'',false);
+  ft+=plr('Proceeds from disposals',fmt(disposal),'#1a9e75',true,'',false);
+  ft+=plr('Cash from investing',fmt(investingCF),investingCF>=0?'#1a9e75':'#e24b4a','',true,false);
+  ft+=plr('FREE CASH FLOW',fmt(fcf),fcf>=0?'#1a9e75':'#e24b4a','','',true);
+  ih('fcf-tbl',ft);
+
+  var notes='<div class="card-title">FCF notes — '+src==='bilant'?'Bilanț 2025':'Custom inputs'+'</div>';
+  notes+='<div class="urow"><span>Cash opening (01.01.2025)</span><span>'+fmt(gv('b-casa-prev'))+'</span></div>';
+  notes+='<div class="urow"><span>Cash closing (31.12.2025)</span><span>'+fmt(gv('b-casa'))+'</span></div>';
+  notes+='<div class="urow bold"><span>Net cash change (F10 verified)</span><span>'+fmt(gv('b-casa')-gv('b-casa-prev'))+'</span></div>';
+  notes+='<div class="hint" style="margin-top:8px">Note: F10 shows cash increased from '+fmt(gv('b-casa-prev'))+' to '+fmt(gv('b-casa'))+' (Δ +'+fmt(gv('b-casa')-gv('b-casa-prev'))+'). Compare to FCF above to validate.</div>';
+  ih('fcf-notes',notes);
+}
+
+// ── Init defaults ────────────────────────────────────────────────
+(function init(){
+  addRow('b-rev','fixed','Product / service revenue',500000,'fixed');
+  addRow('b-ded','fixed','Returns & refunds',10000,'fixed');
+  addRow('b-cogs','pct-net','Direct costs',150000,'fixed');
+  addRow('b-cogs','pct-net','Payment processing',2.5,'pct-net');
+  addRow2('b-ads','Google Ads',50000);
+  addRow2('b-ads','Meta / social ads',30000);
+  addRow2('b-sal','Head of marketing',65000);
+  addRow2('b-sal','Sales reps',80000);
+  addRow2('b-comm','Commissions',20000);
+  addRow2('b-sw','CRM',8000);
+  addRow2('b-agency','Creative agency',12000);
+  addRow2('b-ppl','Operations salaries',60000);
+  addRow2('b-ppl','Office & facilities',24000);
+  addRow2('b-tech','SaaS tools',18000);
+  addRow2('b-ga','Legal & accounting',15000);
+  addRow2('b-ga','Insurance',5000);
+  addRow2('b-da','Depreciation',10000);
+  R();
+})();
+</script>
+</body>
+</html>
